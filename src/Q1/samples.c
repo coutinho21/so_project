@@ -13,4 +13,11 @@ int main(int argc, char *argv[]) {
   //count the number of chars in the file
   for (char c = getc(fp); c != EOF; c = getc(fp)) charCount++;
   
+  int randomNum;
+  unsigned int seed = 0;
+  for(int i = 0; i < n ; i++){
+    for(int j = 0 ; j < m ; j++){
+      //add random num here
+    }
+  }
 }
