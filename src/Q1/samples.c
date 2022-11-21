@@ -4,7 +4,7 @@
 #include <time.h>
 
 int main(int argc, char *argv[]) {
-    size_t t;
+    time_t t;
     int fragmentNumber, sizeOfFragment;
     FILE *fp = fopen(argv[1], "r");
 
@@ -31,12 +31,20 @@ int main(int argc, char *argv[]) {
     if(fileSize == -1){
         perror("ftell():");
         return EXIT_FAILURE;
-    }
+    }   
 
     for(int i = 0; i < fragmentNumber ; i++){
         int random = rand() % fileSize-sizeOfFragment;
-        char* buf = (char) malloc(sizeOfFragment+1(sizeof(char)));
-
+        char *buf = (char *) malloc((sizeOfFragment+1)*(sizeof(char)));
+        fseek(fp, random, SEEK_SET);
+        fread(buf, 1, sizeOfFragment, fp);
+        buf[sizeOfFragment] = '\0';
+        printf(">%s<\n", buf);
+        free(buf);
     }
 
+    if(fclose(fp) == -1){
+        perror("Error closing file.");
+        return EXIT_FAILURE;
+    }
 }
