@@ -47,4 +47,6 @@ int main(int argc, char *argv[]) {
         perror("Error closing file.");
         return EXIT_FAILURE;
     }
+
+    return 0;
 }
