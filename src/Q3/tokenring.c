@@ -25,38 +25,41 @@ int main(int argc, char *argv[]){
             string[7] = '0' + 1;
         }
 
+        int flag = 0;
+
         mp = mkfifo(string,0666);
         if(mp == -1){
             printf("error creating pipe\n");
-            return EXIT_FAILURE;
+            flag = 1;
         }
 
-
-        op = open(string, O_WRONLY);
+        if(!flag) op = open(string, O_WRONLY);
         if(op == -1){
             printf("error occurred opening pipe\n");
             return EXIT_FAILURE;
         }
+
         //write
         if(write(op, &val, sizeof(int)) == -1){
             printf("error writing in the pipe\n");
             return EXIT_FAILURE;
-        }
-        printf("sender sent the data.\n");
+        } else printf("sender sent the data.\n");
         
 
-        op = open(string, O_RDONLY);
+        if(!flag) op = open(string, O_RDONLY);
         if(op == -1){
             printf("error occurred opening pipe\n");
             return EXIT_FAILURE;
         }
+
         //read
         if(read(op, &val, sizeof(int)) == -1){
             printf("error reading from pipe\n");
             return EXIT_FAILURE;
+        }else{
+            printf("Data received from sender: %d\n", val);
+            val++;
         }
-        printf("Data received from sender: %d\n", val);
-        val++;
     }
 
     return 0;
