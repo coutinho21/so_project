@@ -7,4 +7,4 @@ text2epub: text2epub.c
 
 #clean pipes
 clean:
-	rm -f text2epub.o text2epub
+	rm -f text2epub.o text2epub *.epub *.zip
