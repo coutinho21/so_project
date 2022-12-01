@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
         printf("Number of arguments is smaller than expected.\n");
         return EXIT_FAILURE;
     }
-    
+
     char* listOfZips[argc+2];
     listOfZips[0] = (char *)malloc((strlen("zip")+1)*sizeof(char));
     strcpy(listOfZips[0], "zip");
@@ -19,18 +19,25 @@ int main(int argc, char *argv[]) {
     listOfZips[argc+1] = NULL;
 
     for(int i = 1; i < argc ; i++){
-        pid_t pid = fork();
-        if(pid == 0){
-            char* oldName = (char*)malloc((strlen(argv[i])+2));
-            strcpy(oldName, argv[i]);
-            char* newName = (char*)malloc((strlen(argv[i])+2));
-            oldName[strlen(oldName)-4] = '\0';
-            strcpy(newName, oldName);
-            strcat(newName, ".epub");
 
-            if(execlp("pandoc", "pandoc", argv[i], "-o", newName, (char *)NULL) == -1){
+        char aux[strlen(argv[i])+2];
+        strcpy(aux,argv[i]);
+
+        char* oldName = (char*)malloc((strlen(aux)) * sizeof(char));
+        strcpy(oldName, argv[i]);
+        char* newName = (char*)malloc((strlen(aux)) * sizeof(char));
+        oldName[strlen(oldName)-4] = '\0';
+        strcpy(newName, oldName);
+        strcat(newName, ".epub");
+        listOfZips[i+1] = (char *)malloc((strlen(newName) + 1)*sizeof(char));
+        strcpy(listOfZips[i+1], newName);
+
+        pid_t pid = fork();
+
+        if(pid == 0){;
+            if(execlp("pandoc", "pandoc", argv[i], "--quiet", "-o", newName, (char *)NULL) == -1){
                 perror("execlp():");
-                return EXIT_FAILURE; //ver
+                return EXIT_FAILURE; 
             }
             free(oldName);
             free(newName);
@@ -41,9 +48,11 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
     }
-    
     for(int i = 1; i < argc ; i++){
-        wait(NULL);
+        if (wait(NULL) == -1){
+            perror("wait():");
+            return EXIT_FAILURE;
+        }
     }
 
     if(execvp("zip", listOfZips) == -1){
@@ -52,7 +61,6 @@ int main(int argc, char *argv[]) {
     }
     
     for(int i = 0; i < argc+2 ; i++){
-        printf("%s\n", listOfZips[i]);
         free(listOfZips[i]);
     }
 }
