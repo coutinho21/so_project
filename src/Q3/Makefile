@@ -5,6 +5,6 @@ all: clean tokenring
 tokenring: tokenring.c
 	$(CC) $(CFLAGS) -o tokenring tokenring.c
 
-#clean pipes
+#clean pipes and executables
 clean:
 	rm -f pipe* tokenring.o tokenring
