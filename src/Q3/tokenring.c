@@ -1,110 +1,145 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <limits.h>
 
-
-int main(int argc, char *argv[]){
-    int n, t, val = 0, fd, mp, op;
-    float p;
-    char string[] = "pipeitoj";
-    n = atoi(argv[1]);
-    p = atof(argv[2]);
-    t = atoi(argv[3]);
-
-    //creating the pipes
-    for(int i = 1; i <= n; i++){
-        string[4] = '0' + i;
-        string[7] = '0' + i + 1;
-
-        if(i == n){
-            string[4] = '0' + n;
-            string[7] = '0' + 1;
-        }
-        
-        mp = mkfifo(string,0666);
-        
-        if(mp == -1){
-            printf("error creating pipe\n");
-            return EXIT_FAILURE;
-        }
-    }
-
-    while(1){
-        fd = fork();
-        if(fd < 0){
-            printf("error creating process\n");
-            return EXIT_FAILURE;
-        }
-
-        //child process
-        if(fd == 0){
-            op = open(string, O_WRONLY);
-            if(op == -1){
-                printf("error opening pipe\n");
-                return EXIT_FAILURE;
-            }
-            write(op, &val, sizeof(int));
-            close(op);
-            printf("child %d wrote %d\n", getpid(), val);
-            
-            sleep(t);
-            exit(0);
-        }
-        else{
-            //parent process
-            for(int i = 1; i <= n; i++){
-                string[4] = '0' + i;
-                string[7] = '0' + i + 1;
-
-                if(i == n){
-                    string[4] = '0' + n;
-                    string[7] = '0' + 1;
-                }
-                op = open(string, O_RDONLY);
-                if(op == -1){
-                    printf("error opening pipe\n");
-                    return EXIT_FAILURE;
-                }
-                read(op, &val, sizeof(int));
-                close(op);
-                printf("process %d: %d\n", i, val);
-                val++;
-            }
-        }
-    }
-
-
-    op = open(string, O_WRONLY);
-    if(op == -1){
-        printf("error occurred opening pipe\n");
-        return EXIT_FAILURE;
-    }
-
-    //write
-    if(write(op, &val, sizeof(int)) == -1){
-        printf("error writing in the pipe\n");
-        return EXIT_FAILURE;
-    } else printf("sender sent the data.\n");
+int main (int argc, char *argv[]) {
     
-
-    op = open(string, O_RDONLY);
-    if(op == -1){
-        printf("error occurred opening pipe\n");
+    /* check for failure */
+    if(argc != 4) {
+        perror("Wrong number of arguments");
+        return EXIT_FAILURE;
+    }
+    
+    if(atoi(argv[1]) < 2) {
+        perror("Wrong number of processes");
         return EXIT_FAILURE;
     }
 
-    //read
-    if(read(op, &val, sizeof(int)) == -1){
-        printf("error reading from pipe\n");
+    if(atof(argv[2]) > 1 && atof(argv[2]) < 0) {
+        perror("Wrong probability");
         return EXIT_FAILURE;
-    }else{
-        printf("Data received from sender: %d\n", val);
-        val++;
     }
 
-    return 0;
+    if(atoi(argv[3]) < 0) {
+        perror("Wrong number of seconds");
+        return EXIT_FAILURE;
+    }
+
+    char *pn = (char*)malloc(50 * sizeof(char));
+    for(int i = 1; i <= atoi(argv[1]); i++) {
+        if(i == atoi(argv[1]))
+            sprintf(pn, "pipe%dto1", i);
+        else
+            sprintf(pn, "pipe%dto%d", i, i+1);
+
+        if((mkfifo(pn, 0666)) < 0) {
+            perror("mkfifo():");
+            exit(EXIT_FAILURE);
+        }
+    }
+    free(pn);
+
+    int tok = 0;
+
+    pid_t pid[atoi(argv[1])];
+    char *pipeWrite = (char*)malloc(50 * sizeof(char));
+    char *pipeRead = (char*)malloc(50 * sizeof(char));
+    for(int i = 1; i <= atoi(argv[1]); i++) {
+        if((pid[i-1] = fork()) < 0) {
+            perror("fork");
+            exit(EXIT_FAILURE);
+        } 
+        else if(pid[i-1] == 0) {
+
+            if(i == 1) {
+                sprintf(pipeWrite, "pipe%dto%d", i, i+1);
+                sprintf(pipeRead, "pipe%dto1", atoi(argv[1]));
+            } 
+            else if(i == atoi(argv[1])) {
+                sprintf(pipeWrite, "pipe%dto1", i);
+                sprintf(pipeRead, "pipe%dto%d", i-1, i);
+            } 
+            else {
+                sprintf(pipeWrite, "pipe%dto%d", i, i+1);
+                sprintf(pipeRead, "pipe%dto%d", i-1, i);
+            }
+
+            srandom(getpid());
+
+            int fd[2];
+
+            if(i == 1) {
+
+                if((fd[1] = open(pipeWrite, O_WRONLY)) < 0) {
+                    perror("open():");
+                    exit(EXIT_FAILURE);
+                }
+
+                if(tok == INT_MAX)
+                    exit(EXIT_SUCCESS);
+                else
+                    tok++; 
+
+                if(write(fd[1], &tok, sizeof(int)) < 0) {
+                    perror("write():");
+                    exit(EXIT_FAILURE);
+                }
+
+                close(fd[1]);
+            }
+
+            while(1) {
+
+                if((fd[0] = open(pipeRead, O_RDONLY)) < 0) {
+                    perror("open():");
+                    exit(EXIT_FAILURE);
+                }
+
+                if(read(fd[0], &tok, sizeof(int)) < 0) {
+                    perror("read():");
+                    exit(EXIT_FAILURE);
+                }
+
+                close(fd[0]);
+                tok++; 
+                
+                int rand = random() % 100;
+                if(rand < 100 * atof(argv[2])) {
+                    printf("[p%d] lock on token (val = %d)\n", i, tok);
+                    sleep(atoi(argv[3]));
+                    printf("[p%d] unlock token\n", i);
+                }
+
+                if((fd[1] = open(pipeWrite, O_WRONLY)) < 0) {
+                    perror("open():");
+                    exit(EXIT_FAILURE);
+                }
+                
+                if(write(fd[1], &tok, sizeof(int)) < 0) {
+                    perror("write():");
+                    exit(EXIT_FAILURE);
+                }
+
+                close(fd[1]);
+            }
+
+            exit(EXIT_SUCCESS);
+        }
+    }
+
+    /* wait for child processes to end */
+    for(int i = 0; i < atoi(argv[1]); i++) {
+        if(waitpid(pid[i], NULL, 0) < 0) {
+            perror("waitpid():");
+            return EXIT_FAILURE;
+        }
+    }
+
+    return EXIT_SUCCESS;
 }
