@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -27,7 +28,7 @@ int main(int argc, char *argv[]) {
             strcpy(newName, oldName);
             strcat(newName, ".epub");
 
-            if(execlp("pandoc", "pandoc", argv[i], "-o", newName, NULL) == -1){
+            if(execlp("pandoc", "pandoc", argv[i], "-o", newName, (char *)NULL) == -1){
                 perror("execlp():");
                 return EXIT_FAILURE; //ver
             }
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]) {
     }
     
     for(int i = 0; i < argc+2 ; i++){
-        print("%s\n", listOfZips[i]);
+        printf("%s\n", listOfZips[i]);
         free(listOfZips[i]);
     }
 }
