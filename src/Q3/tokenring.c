@@ -9,7 +9,7 @@
 #include <limits.h>
 
 int main (int argc, char *argv[]) {
-    
+    setbuf(stdout, NULL);
     /* check for failure */
     if(argc != 4) {
         perror("Wrong number of arguments");
